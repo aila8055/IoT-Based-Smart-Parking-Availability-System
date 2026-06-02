@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AeroPark - IoT Smart Parking Dashboard</title>
+  
+  <!-- CSS Styles -->
+  <link rel="stylesheet" href="style.css">
+  
+  <!-- Chart.js for analytics -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- Real-time Diagnostic Error Console -->
+  <script>
+    window.addEventListener('error', function(e) {
+      console.log('Error caught by diagnostic system:', e);
+      const debugBanner = document.getElementById('debugBanner');
+      if (debugBanner) {
+        debugBanner.style.display = 'block';
+        debugBanner.innerHTML = '<strong>⚠️ JavaScript Diagnostic Alert:</strong> ' + e.message + ' <br><small>Location: ' + (e.filename ? e.filename.split("/").pop() : \'inline\') + ':' + e.lineno + '</small>';
+      }
+    });
+  </script>
+</head>
+<body>
+
+  <!-- ==========================================
+       HEADER
+       ========================================== -->
+  <header>
+    <div class="logo-container">
+      <div class="logo-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" style="width: 24px; height: 24px;">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 18.75a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 0 1-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 0 0-3.213-9.193 2.056 2.056 0 0 0-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177V3.75A1.5 1.5 0 0 0 12.75 2.25h-1.5a1.5 1.5 0 0 0-1.5 1.5v3.823M16.5 7.5V3.75m-6 9A1.5 1.5 0 0 0 9 11.25H4.5A1.5 1.5 0 0 0 3 12.75V15h13.5v-2.25Z" />
+        </svg>
+      </div>
+      <div>
+        <h1 class="logo-title">AeroPark</h1>
+        <span class="system-tag">Cloud-IoT System</span>
+      </div>
+    </div>
+
+    <div class="header-controls">
+      <!-- Connection Badge -->
+      <div id="connectionStatus" class="connection-badge">
+        <div class="status-dot"></div>
+        <span id="connectionText">Connecting...</span>
+      </div>
+
+      <!-- Dark/Light Theme Switcher -->
+      <button id="themeToggle" class="theme-toggle-btn" title="Toggle light/dark theme">
+        <!-- Sun Icon (visible in Dark Mode to switch to Light) -->
+        <svg id="sunIcon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m0 13.5V21m9.75-9h-2.25M3.75 12h2.25m13.364-6.364l-1.591 1.591M6.364 17.636l-1.591 1.591m12.728 0l-1.591-1.591M6.364 6.364L4.773 4.773M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z" />
+        </svg>
+        <!-- Moon Icon (visible in Light Mode to switch to Dark) -->
+        <svg id="moonIcon" style="display: none;" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z" />
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- ==========================================
+       MAIN CONTENT
+       ========================================== -->
+  <main>
+    
+    <!-- LEFT SIDE: Parking Lots and Live Stats -->
+    <div class="dashboard-left">
+      
+      <!-- Metrics Overview -->
+      <div class="metrics-row">
+        <div class="glass-panel metric-card">
+          <span class="metric-label">Total Slots</span>
+          <span class="metric-value">2</span>
+          <span class="metric-subtitle">Configured Spots</span>
+        </div>
+        <div class="glass-panel metric-card" style="border-left: 4px solid var(--color-available);">
+          <span class="metric-label">Available</span>
+          <span id="spotsAvailable" class="metric-value" style="color: var(--color-available);">2</span>
+          <span class="metric-subtitle">Ready to Occupy</span>
+        </div>
+        <div class="glass-panel metric-card" style="border-left: 4px solid var(--color-occupied);">
+          <span class="metric-label">Occupied</span>
+          <span id="spotsOccupied" class="metric-value" style="color: var(--color-occupied);">0</span>
+          <span class="metric-subtitle">Currently In Use</span>
+        </div>
+      </div>
+
+      <!-- Live Parking Lot Visualizer -->
+      <div class="glass-panel parking-lot-section">
+        <div class="section-header">
+          <h2 class="section-title">Live Parking Bay</h2>
+          <span id="liveIndicator" style="font-size: 0.8rem; color: var(--text-muted); display: flex; align-items: center; gap: 0.35rem;">
+            <span style="width: 6px; height: 6px; background-color: var(--color-available); border-radius: 50%;"></span>
+            Live Updates Enabled
+          </span>
+        </div>
+
+        <div class="parking-bay-container">
+          
+          <!-- Parking Slot 1 -->
+          <div id="slotCard1" class="parking-slot-card available">
+            <div class="slot-header">
+              <span class="slot-id">SLOT 01</span>
+              <span id="slotStatusBadge1" class="slot-status-pill">Available</span>
+            </div>
+            
+            <div class="slot-canvas">
+              <span class="road-marking">P1</span>
+              <!-- Premium Top-Down View Car SVG -->
+              <div id="car1" class="car-svg-container">
+                <svg viewBox="0 0 100 180" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+                  <!-- Car Body Shadow -->
+                  <rect x="6" y="6" width="88" height="168" rx="20" fill="rgba(0,0,0,0.15)" filter="blur(4px)" />
+                  <!-- Main Chassis -->
+                  <rect x="10" y="10" width="80" height="160" rx="16" fill="url(#cyanCarBody)" stroke="#0e7490" stroke-width="2" />
+                  
+                  <!-- Wheels -->
+                  <rect x="4" y="24" width="10" height="30" rx="4" fill="#1e293b" />
+                  <rect x="86" y="24" width="10" height="30" rx="4" fill="#1e293b" />
+                  <rect x="4" y="126" width="10" height="30" rx="4" fill="#1e293b" />
+                  <rect x="86" y="126" width="10" height="30" rx="4" fill="#1e293b" />
+                  
+                  <!-- Windshield / Glass Cabin -->
+                  <path d="M 20 60 Q 50 50 80 60 L 76 96 Q 50 104 24 96 Z" fill="#0f172a" opacity="0.85" stroke="#334155" stroke-width="1.5" />
+                  <path d="M 25 64 Q 50 56 75 64 L 72 82 Q 50 90 28 82 Z" fill="#38bdf8" opacity="0.3" /> <!-- Sun reflection -->
+                  
+                  <!-- Rear Window -->
+                  <path d="M 22 120 Q 50 126 78 120 L 74 135 Q 50 140 26 135 Z" fill="#0f172a" opacity="0.85" stroke="#334155" stroke-width="1" />
+                  
+                  <!-- Headlights -->
+                  <polygon points="18,12 30,12 28,2 20,2" fill="#fef08a" opacity="0.9" />
+                  <polygon points="82,12 70,12 72,2 80,2" fill="#fef08a" opacity="0.9" />
+                  <circle cx="24" cy="7" r="3" fill="#fef08a" />
+                  <circle cx="76" cy="7" r="3" fill="#fef08a" />
+                  
+                  <!-- Taillights -->
+                  <rect x="18" y="166" width="10" height="4" rx="1" fill="#ef4444" />
+                  <rect x="72" y="166" width="10" height="4" rx="1" fill="#ef4444" />
+
+                  <!-- Roof Details / Spoiler -->
+                  <line x1="30" y1="36" x2="70" y2="36" stroke="#083344" stroke-width="2" stroke-linecap="round" />
+                  <rect x="22" y="142" width="56" height="6" rx="2" fill="#083344" />
+
+                  <!-- Gradients -->
+                  <defs>
+                    <linearGradient id="cyanCarBody" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" stop-color="#06b6d4" />
+                      <stop offset="50%" stop-color="#0891b2" />
+                      <stop offset="100%" stop-color="#0e7490" />
+                    </linearGradient>
+                  </defs>
+                </svg>
+              </div>
+            </div>
+            
+            <div class="slot-footer">
+              <span id="distanceLabel1" class="distance-badge">No Object</span>
+            </div>
+          </div>
+
+          <!-- Parking Slot 2 -->
+          <div id="slotCard2" class="parking-slot-card available">
+            <div class="slot-header">
+              <span class="slot-id">SLOT 02</span>
+              <span id="slotStatusBadge2" class="slot-status-pill">Available</span>
+            </div>
+            
+            <div class="slot-canvas">
+              <span class="road-marking">P2</span>
+              <!-- Premium Top-Down View Car SVG -->
+              <div id="car2" class="car-svg-container">
+                <svg viewBox="0 0 100 180" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+                  <!-- Car Body Shadow -->
+                  <rect x="6" y="6" width="88" height="168" rx="20" fill="rgba(0,0,0,0.15)" filter="blur(4px)" />
+                  <!-- Main Chassis -->
+                  <rect x="10" y="10" width="80" height="160" rx="16" fill="url(#purpleCarBody)" stroke="#6d28d9" stroke-width="2" />
+                  
+                  <!-- Wheels -->
+                  <rect x="4" y="24" width="10" height="30" rx="4" fill="#1e293b" />
+                  <rect x="86" y="24" width="10" height="30" rx="4" fill="#1e293b" />
+                  <rect x="4" y="126" width="10" height="30" rx="4" fill="#1e293b" />
+                  <rect x="86" y="126" width="10" height="30" rx="4" fill="#1e293b" />
+                  
+                  <!-- Windshield / Glass Cabin -->
+                  <path d="M 20 60 Q 50 50 80 60 L 76 96 Q 50 104 24 96 Z" fill="#0f172a" opacity="0.85" stroke="#334155" stroke-width="1.5" />
+                  <path d="M 25 64 Q 50 56 75 64 L 72 82 Q 50 90 28 82 Z" fill="#e9d5ff" opacity="0.3" /> <!-- reflection -->
+                  
+                  <!-- Rear Window -->
+                  <path d="M 22 120 Q 50 126 78 120 L 74 135 Q 50 140 26 135 Z" fill="#0f172a" opacity="0.85" stroke="#334155" stroke-width="1" />
+                  
+                  <!-- Headlights -->
+                  <polygon points="18,12 30,12 28,2 20,2" fill="#fef08a" opacity="0.9" />
+                  <polygon points="82,12 70,12 72,2 80,2" fill="#fef08a" opacity="0.9" />
+                  <circle cx="24" cy="7" r="3" fill="#fef08a" />
+                  <circle cx="76" cy="7" r="3" fill="#fef08a" />
+                  
+                  <!-- Taillights -->
+                  <rect x="18" y="166" width="10" height="4" rx="1" fill="#ef4444" />
+                  <rect x="72" y="166" width="10" height="4" rx="1" fill="#ef4444" />
+
+                  <!-- Roof Details / Spoiler -->
+                  <line x1="30" y1="36" x2="70" y2="36" stroke="#4c1d95" stroke-width="2" stroke-linecap="round" />
+                  <rect x="22" y="142" width="56" height="6" rx="2" fill="#4c1d95" />
+
+                  <!-- Gradients -->
+                  <defs>
+                    <linearGradient id="purpleCarBody" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" stop-color="#a855f7" />
+                      <stop offset="50%" stop-color="#8b5cf6" />
+                      <stop offset="100%" stop-color="#6d28d9" />
+                    </linearGradient>
+                  </defs>
+                </svg>
+              </div>
+            </div>
+            
+            <div class="slot-footer">
+              <span id="distanceLabel2" class="distance-badge">No Object</span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Analytical Chart -->
+      <div class="glass-panel stats-section">
+        <h2 class="section-title">Spot Occupancy Trends</h2>
+        <div class="chart-container">
+          <canvas id="occupancyChart"></canvas>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- RIGHT SIDE: Config & System Info -->
+    <div class="dashboard-right">
+      
+      <!-- Hardware Diagram & Configuration Info -->
+      <div class="glass-panel">
+        <h2 class="section-title" style="margin-bottom: 1rem;">System Specifications</h2>
+        
+        <div class="config-group">
+          
+          <!-- Cloud Details -->
+          <div class="config-item">
+            <div class="config-info">
+              <span class="config-title">Firebase Cloud RTDB</span>
+              <span class="config-description">Realtime Database connection parameters</span>
+            </div>
+            <div style="font-size: 0.75rem; text-align: right; word-break: break-all; color: var(--text-secondary); max-width: 60%;">
+              smartparkingsystem-8055
+            </div>
+          </div>
+
+          <!-- Microcontroller -->
+          <div class="config-item">
+            <div class="config-info">
+              <span class="config-title">Controller Board</span>
+              <span class="config-description">Processor and network chip</span>
+            </div>
+            <span style="font-size: 0.85rem; font-weight: 600; color: var(--accent-primary);">ESP8266 / NodeMCU</span>
+          </div>
+
+          <!-- Pin Mapping Section -->
+          <div style="display: flex; flex-direction: column; gap: 0.5rem; margin-top: 0.5rem;">
+            <span style="font-size: 0.85rem; font-weight: 600; color: var(--text-secondary);">ESP8266 GPIO Pin Connections</span>
+            
+            <div class="pin-grid">
+              <div class="pin-item">
+                <span class="pin-label">TRIG1</span>
+                <span class="pin-val">D1 (GPIO5)</span>
+              </div>
+              <div class="pin-item">
+                <span class="pin-label">ECHO1</span>
+                <span class="pin-val">D2 (GPIO4)</span>
+              </div>
+              <div class="pin-item">
+                <span class="pin-label">TRIG2</span>
+                <span class="pin-val">D3 (GPIO0)</span>
+              </div>
+              <div class="pin-item">
+                <span class="pin-label">ECHO2</span>
+                <span class="pin-val">D5 (GPIO14)</span>
+              </div>
+              <div class="pin-item">
+                <span class="pin-label">RED1</span>
+                <span class="pin-val">D4 (GPIO2)</span>
+              </div>
+              <div class="pin-item">
+                <span class="pin-label">GREEN1</span>
+                <span class="pin-val">D8 (GPIO15)</span>
+              </div>
+              <div class="pin-item">
+                <span class="pin-label">RED2</span>
+                <span class="pin-val">D6 (GPIO12)</span>
+              </div>
+              <div class="pin-item">
+                <span class="pin-label">GREEN2</span>
+                <span class="pin-val">D7 (GPIO13)</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Developer controls and Simulation Panel -->
+      <div class="glass-panel" style="border-top: 4px solid var(--accent-primary);">
+        <h2 class="section-title" style="margin-bottom: 0.5rem;">Control Panel</h2>
+        <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 1.25rem;">
+          Control simulation modes or monitor the live Firebase active endpoints directly.
+        </p>
+
+        <div class="config-group">
+          
+          <!-- Simulation Mode Switcher -->
+          <div class="config-item">
+            <div class="config-info">
+              <span class="config-title">Hardware Simulation Mode</span>
+              <span class="config-description">Toggle simulation to test without an active board</span>
+            </div>
+            <label class="switch-control">
+              <input type="checkbox" id="simulationSwitch">
+              <span class="slider-toggle"></span>
+            </label>
+          </div>
+
+          <!-- Mock Control Interface -->
+          <div id="simulationControls" class="simulation-ui">
+            <span style="font-size: 0.8rem; font-weight: 700; color: var(--accent-primary); display: block; margin-bottom: 0.5rem; text-transform: uppercase;">
+              Active Simulator Channels
+            </span>
+            <p style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.75rem;">
+              Simulate occupancy sensors. Toggle status or modify distance values below.
+            </p>
+
+            <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+              <!-- Slot 1 Sim -->
+              <div style="background: rgba(255,255,255,0.03); padding: 0.75rem; border-radius: var(--radius-sm);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                  <span style="font-size: 0.8rem; font-weight: 600;">Slot 1 (Sensor A)</span>
+                  <label class="switch-control" style="width: 44px; height: 24px;">
+                    <input type="checkbox" id="simSlot1">
+                    <span class="slider-toggle" style="border-radius: 24px;"></span>
+                  </label>
+                </div>
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                  <span style="font-size: 0.7rem; color: var(--text-muted);">Simulated Dist:</span>
+                  <input type="range" id="simDist1" min="2" max="30" value="15" style="flex: 1; accent-color: var(--accent-primary);">
+                  <span id="simDistVal1" style="font-size: 0.75rem; font-weight: 700; width: 35px; text-align: right;">15 cm</span>
+                </div>
+              </div>
+
+              <!-- Slot 2 Sim -->
+              <div style="background: rgba(255,255,255,0.03); padding: 0.75rem; border-radius: var(--radius-sm);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                  <span style="font-size: 0.8rem; font-weight: 600;">Slot 2 (Sensor B)</span>
+                  <label class="switch-control" style="width: 44px; height: 24px;">
+                    <input type="checkbox" id="simSlot2">
+                    <span class="slider-toggle" style="border-radius: 24px;"></span>
+                  </label>
+                </div>
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                  <span style="font-size: 0.7rem; color: var(--text-muted);">Simulated Dist:</span>
+                  <input type="range" id="simDist2" min="2" max="30" value="15" style="flex: 1; accent-color: var(--accent-primary);">
+                  <span id="simDistVal2" style="font-size: 0.75rem; font-weight: 700; width: 35px; text-align: right;">15 cm</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Alert System settings -->
+          <div class="config-item">
+            <div class="config-info">
+              <span class="config-title">Browser Alerts</span>
+              <span class="config-description">Notify when spots open up</span>
+            </div>
+            <label class="switch-control">
+              <input type="checkbox" id="alertSwitch" checked>
+              <span class="slider-toggle"></span>
+            </label>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- ==========================================
+       FOOTER
+       ========================================== -->
+  <footer>
+    <p>IoT-Based Smart Parking Availability System &copy; 2026. Created for college mini-project.</p>
+    <p style="margin-top: 0.5rem; font-size: 0.75rem; color: var(--text-muted);">
+      Hardware connected via MQTT/HTTP endpoints | Connected User: <a href="mailto:245123749025@mvsrec.edu.in">245123749025@mvsrec.edu.in</a>
+    </p>
+  </footer>
+
+  <!-- ==========================================
+       DIAGNOSTIC BANNER (Hidden unless error occurs)
+       ========================================== -->
+  <div id="debugBanner" style="display:none; background:rgba(220,38,38,0.95); color:white; padding:15px 20px; font-size:13px; font-family:monospace; position:fixed; bottom:20px; left:20px; right:20px; z-index:9999; border-radius:10px; box-shadow:0 10px 25px rgba(0,0,0,0.3); border:1px solid #ef4444; line-height:1.5;"></div>
+
+  <!-- ==========================================
+       SCRIPTS
+       ========================================== -->
+  <!-- Firebase JS SDK scripts (v10 Compat CDN) -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+  
+  <!-- App Controller with cache-busting query parameter -->
+  <script src="app.js?v=3"></script>
+
+</body>
+</html>
