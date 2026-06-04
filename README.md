@@ -48,6 +48,12 @@ The web application is fully aligned with the hardware layout configured inside 
 | **LED Green (Slot 2)** | `D7` | `GPIO13` | Signals "Available" state (On when Vacant) |
 | **LED Red (Slot 2)** | `D6` | `GPIO12` | Signals "Occupied" state (On when Occupied) |
 
+### Firmware & Arduino Sketches
+
+The microcontroller code is organized as follows:
+* **[firmware/](firmware/)**: Contains [firmware.ino](firmware/firmware.ino) for the ESP8266 (NodeMCU) which reads the HC-SR04 ultrasonic sensors, manages green/red LEDs status indicators, and synchronizes real-time occupancy to Firebase.
+* **[extras/camera_stream/](extras/camera_stream/)**: Contains [camera_stream.ino](extras/camera_stream/camera_stream.ino) for ESP32-CAM to stream camera video over WebSockets.
+
 ---
 
 ## 🛠️ Software Stack
